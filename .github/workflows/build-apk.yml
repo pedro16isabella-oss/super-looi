@@ -22,3 +22,10 @@ jobs:
 
       - name: Compilar pacotes (na ordem certa)
         run: pnpm --filter "@super-looi/runtime..." build
+
+      - name: Salvar resultado para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-looi-build
+          path: packages/*/dist
+          if-no-files-found: warn
