@@ -1,0 +1,123 @@
+name: APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Criar o app
+        run: |
+          mkdir -p app/www
+          cd app
+          cat > www/index.html <<'EOF'
+          <!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+          <title>Super LOOI</title>
+          <style>
+          html,body{margin:0;height:100%;background:#0b0f1a;color:#fff;font-family:sans-serif;overflow:hidden;touch-action:none}
+          #face{position:absolute;inset:0 0 110px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:46px}
+          .eyes{display:flex;gap:44px}
+          .eye{width:90px;height:110px;background:#4de1ff;border-radius:50%;position:relative;overflow:hidden;transition:height .2s;box-shadow:0 0 30px #4de1ff88}
+          .pupil{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px;background:#0b0f1a;border-radius:50%;transition:transform .08s}
+          .lid{position:absolute;left:0;right:0;top:0;height:0;background:#0b0f1a;transition:height .15s}
+          #mouth{width:80px;height:22px;border:0;border-bottom:8px solid #4de1ff;border-radius:0 0 80px 80px;transition:all .2s}
+          #bar{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;gap:8px;align-items:center;padding:0 10px env(safe-area-inset-bottom,0);overflow-x:auto;box-sizing:border-box}
+          button{flex:0 0 auto;padding:14px 16px;border:0;border-radius:14px;background:#1c2540;color:#fff;font-size:16px}
+          button.on{background:#4de1ff;color:#0b0f1a}
+          </style></head><body>
+          <div id="face"><div class="eyes">
+          <div class="eye"><div class="pupil"></div><div class="lid"></div></div>
+          <div class="eye"><div class="pupil"></div><div class="lid"></div></div>
+          </div><div id="mouth"></div></div>
+          <div id="bar">
+          <button id="mic">🎤 Ativar microfone</button>
+          <button data-e="feliz">😊 Feliz</button>
+          <button data-e="triste">😢 Triste</button>
+          <button data-e="bravo">😠 Bravo</button>
+          <button data-e="surpreso">😮 Surpreso</button>
+          <button data-e="sono">😴 Sono</button>
+          </div>
+          <script>
+          var E={
+            feliz:{eh:110,lid:0,mw:80,mh:22,s:1,say:'Oba! Estou muito feliz!'},
+            triste:{eh:100,lid:30,mw:60,mh:16,s:0,say:'Estou meio tristinho...'},
+            bravo:{eh:80,lid:38,mw:60,mh:6,s:0,say:'Hmpf! Estou bravo!'},
+            surpreso:{eh:130,lid:0,mw:34,mh:34,s:2,say:'Uau! Que susto!'},
+            sono:{eh:110,lid:70,mw:40,mh:8,s:1,say:'Estou com soninho... zzz'}
+          };
+          var eyes=[].slice.call(document.querySelectorAll('.eye'));
+          var lids=[].slice.call(document.querySelectorAll('.lid'));
+          var pupils=[].slice.call(document.querySelectorAll('.pupil'));
+          var mouth=document.getElementById('mouth');
+          var cur='feliz',gx=0,gy=0,vol=0;
+          function say(t){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='pt-BR';u.pitch=1.7;u.rate=1.05;speechSynthesis.speak(u);}catch(e){}}
+          function emo(n,talk){
+            var c=E[n];cur=n;
+            eyes.forEach(function(e){e.style.height=c.eh+'px';});
+            lids.forEach(function(l){l.dataset.base=c.lid;l.style.height=c.lid+'px';});
+            mouth.style.width=c.mw+'px';mouth.style.height=c.mh+'px';
+            mouth.style.border='0';
+            if(c.s==1){mouth.style.borderBottom='8px solid #4de1ff';mouth.style.borderRadius='0 0 80px 80px';}
+            else if(c.s==0){mouth.style.borderTop='8px solid #4de1ff';mouth.style.borderRadius='80px 80px 0 0';}
+            else{mouth.style.border='8px solid #4de1ff';mouth.style.borderRadius='50%';}
+            [].forEach.call(document.querySelectorAll('button[data-e]'),function(b){b.className=b.dataset.e==n?'on':'';});
+            if(talk)say(c.say);
+          }
+          function look(){var s=1+vol*0.9;pupils.forEach(function(p){p.style.transform='translate('+gx+'px,'+gy+'px) scale('+s+')';});}
+          document.getElementById('face').addEventListener('pointermove',function(ev){
+            gx=Math.max(-22,Math.min(22,(ev.clientX-innerWidth/2)/8));
+            gy=Math.max(-22,Math.min(22,(ev.clientY-innerHeight/2)/10));look();});
+          document.getElementById('face').addEventListener('click',function(){
+            var f=['Oi! Eu sou o Super LOOI!','Me faz um carinho!','Vamos brincar?','Estou te olhando!'];
+            say(f[Math.floor(Math.random()*f.length)]);});
+          [].forEach.call(document.querySelectorAll('button[data-e]'),function(b){b.onclick=function(){emo(b.dataset.e,true);};});
+          function blink(){
+            lids.forEach(function(l){l.style.height='110px';});
+            setTimeout(function(){lids.forEach(function(l){l.style.height=l.dataset.base+'px';});},160);
+            setTimeout(blink,2000+Math.random()*3000);}
+          var last=0;
+          document.getElementById('mic').onclick=function(){
+            var btn=this;
+            navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+              var ac=new (window.AudioContext||window.webkitAudioContext)();
+              var an=ac.createAnalyser();an.fftSize=256;
+              ac.createMediaStreamSource(st).connect(an);
+              var d=new Uint8Array(an.frequencyBinCount);
+              btn.textContent='🎤 Ouvindo';btn.className='on';
+              (function loop(){
+                an.getByteTimeDomainData(d);
+                var m=0;for(var i=0;i<d.length;i++){m=Math.max(m,Math.abs(d[i]-128));}
+                vol=Math.min(1,m/60);look();
+                if(vol>0.8&&Date.now()-last>4000){last=Date.now();var prev=cur;emo('surpreso',true);setTimeout(function(){emo(prev,false);},1800);}
+                requestAnimationFrame(loop);})();
+            }).catch(function(){btn.textContent='Microfone negado';});
+          };
+          emo('feliz',false);setTimeout(blink,2000);
+          </script></body></html>
+          EOF
+          npm init -y
+          npm i @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npx cap init "Super LOOI" com.pedro.superlooi --web-dir=www
+          npx cap add android
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          npx cap sync android
+
+      - name: Compilar APK
+        working-directory: app/android
+        run: ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: super-looi-apk
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
