@@ -23,7 +23,7 @@ jobs:
       - name: Configurar Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
 
       - name: Configurar Java 17
         uses: actions/setup-java@v5
@@ -41,11 +41,15 @@ jobs:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
         run: |
           pnpm install --frozen-lockfile
-          pnpm build
-          pnpm --filter @super-looi/nsh exec node --import tsx scripts/nsh.ts package --target android
+          pnpm --filter @super-looi/runtime build
+          pnpm --filter @super-looi/nsh exec node scripts/prepare-linux-shell.mjs all
+          pnpm --filter @super-looi/nsh build
+          pnpm --filter @super-looi/nsh exec node --import tsx scripts/nsh.ts package --target android --out dist-android
 
       - name: Enviar APK para download
         uses: actions/upload-artifact@v4
         with:
           name: super-looi-android-apk
-          path: '**/*.apk'
+          path: |
+            dist-android/**/*.apk
+            **/*.apk
